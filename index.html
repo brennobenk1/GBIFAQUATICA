@@ -414,13 +414,28 @@ function buildIndexes() {
 
 // ── DETECT INPUT LEVEL ────────────────────────────────────────────────────────
 // Returns the "intent rank" of what the user typed, independent of what the DB found.
-// e.g. "Eunotia sp." → 'genus'  |  "Chironomidae" → 'family'  |  "Naviculales" → 'order'
+// e.g. "Eunotia sp."      → 'genus'   (genus + sp.)
+// e.g. "Chironomidae sp." → 'family'  (family + sp.)
+// e.g. "Naviculales sp."  → 'order'   (order + sp.)
+// e.g. "Bacillariophyceae sp." → 'class'
+// e.g. "Arthropoda sp."   → 'phylum'
+// e.g. "Chironomidae"     → 'family'  (single word matched to family index)
 function detectInputLevel(name) {
   const trimmed = name.trim();
   const normTrimmed = normalize(trimmed);
 
-  // ── sp. / spp. suffix → genus-level intent
-  if (/\s+sp\.?$|\s+spp\.?$/i.test(trimmed)) return 'genus';
+  // ── sp. / spp. suffix — check what rank the base name belongs to
+  const spSuffixMatch = trimmed.match(/^(.+?)\s+sp\.?p?\.?$/i);
+  if (spSuffixMatch) {
+    const base = normalize(spSuffixMatch[1].trim());
+    // Check base against higher-rank indexes first (more specific wins)
+    if (phylumIndex.has(base))  return 'phylum';
+    if (classIndex.has(base))   return 'class';
+    if (orderIndex.has(base))   return 'order';
+    if (familyIndex.has(base))  return 'family';
+    // Default sp. to genus (original behaviour for unknown base)
+    return 'genus';
+  }
 
   // ── single word checks against known indexes (exact)
   const words = trimmed.split(/\s+/);
@@ -440,37 +455,58 @@ function searchName(name) {
   const trimmed = name.trim();
   const norm = normalize(trimmed);
 
-  // Strip trailing sp./spp. to find the genus in the index
-  const normBase = norm.replace(/\s+sp\.?$|\s+spp\.?$/, '').trim();
+  // Extract base when there's a sp./spp. suffix
+  const spSuffixMatch = trimmed.match(/^(.+?)\s+sp\.?p?\.?$/i);
+  const normBase = spSuffixMatch ? normalize(spSuffixMatch[1].trim()) : norm;
+  const hasSpSuffix = !!spSuffixMatch;
 
   let rows = [], tipo = '';
 
-  // 1. Try exact scientific name first (only if not a sp. query)
-  if (!/\s+sp\.?$|\s+spp\.?$/i.test(trimmed) && scientificIndex.has(norm)) {
+  // 1. sp./spp. suffix: route to the correct rank index based on base name
+  if (hasSpSuffix) {
+    if (phylumIndex.has(normBase)) {
+      rows = phylumIndex.get(normBase);
+      tipo = 'Filo (sp.)';
+    } else if (classIndex.has(normBase)) {
+      rows = classIndex.get(normBase);
+      tipo = 'Classe (sp.)';
+    } else if (orderIndex.has(normBase)) {
+      rows = orderIndex.get(normBase);
+      tipo = 'Ordem (sp.)';
+    } else if (familyIndex.has(normBase)) {
+      rows = familyIndex.get(normBase);
+      tipo = 'Família (sp.)';
+    } else if (genusIndex.has(normBase)) {
+      rows = genusIndex.get(normBase);
+      tipo = 'Gênero';
+    }
+  }
+  // 2. Exact scientific name (no sp. suffix)
+  else if (scientificIndex.has(norm)) {
     rows = scientificIndex.get(norm);
     tipo = 'Nome científico';
   }
-  // 2. sp./spp. or bare genus
-  else if (genusIndex.has(normBase)) {
-    rows = genusIndex.get(normBase);
+  // 3. Bare genus
+  else if (genusIndex.has(norm)) {
+    rows = genusIndex.get(norm);
     tipo = 'Gênero';
   }
-  // 3. Family exact
+  // 4. Family exact
   else if (familyIndex.has(norm)) {
     rows = familyIndex.get(norm);
     tipo = 'Família';
   }
-  // 4. Order exact
+  // 5. Order exact
   else if (orderIndex.has(norm)) {
     rows = orderIndex.get(norm);
     tipo = 'Ordem';
   }
-  // 5. Class exact
+  // 6. Class exact
   else if (classIndex.has(norm)) {
     rows = classIndex.get(norm);
     tipo = 'Classe';
   }
-  // 6. Phylum exact
+  // 7. Phylum exact
   else if (phylumIndex.has(norm)) {
     rows = phylumIndex.get(norm);
     tipo = 'Filo';
