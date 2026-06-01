@@ -412,30 +412,70 @@ function buildIndexes() {
   }
 }
 
+// ── DETECT INPUT LEVEL ────────────────────────────────────────────────────────
+// Returns the "intent rank" of what the user typed, independent of what the DB found.
+// e.g. "Eunotia sp." → 'genus'  |  "Chironomidae" → 'family'  |  "Naviculales" → 'order'
+function detectInputLevel(name) {
+  const trimmed = name.trim();
+  const normTrimmed = normalize(trimmed);
+
+  // ── sp. / spp. suffix → genus-level intent
+  if (/\s+sp\.?$|\s+spp\.?$/i.test(trimmed)) return 'genus';
+
+  // ── single word checks against known indexes (exact)
+  const words = trimmed.split(/\s+/);
+  if (words.length === 1) {
+    if (familyIndex.has(normTrimmed)) return 'family';
+    if (orderIndex.has(normTrimmed))  return 'order';
+    if (classIndex.has(normTrimmed))  return 'class';
+    if (phylumIndex.has(normTrimmed)) return 'phylum';
+    if (genusIndex.has(normTrimmed))  return 'genus';
+  }
+
+  return 'species'; // default — treat as full scientific name
+}
+
 // ── SEARCH ────────────────────────────────────────────────────────────────────
 function searchName(name) {
-  const norm = normalize(name);
+  const trimmed = name.trim();
+  const norm = normalize(trimmed);
+
+  // Strip trailing sp./spp. to find the genus in the index
+  const normBase = norm.replace(/\s+sp\.?$|\s+spp\.?$/, '').trim();
+
   let rows = [], tipo = '';
 
-  if (scientificIndex.has(norm)) {
+  // 1. Try exact scientific name first (only if not a sp. query)
+  if (!/\s+sp\.?$|\s+spp\.?$/i.test(trimmed) && scientificIndex.has(norm)) {
     rows = scientificIndex.get(norm);
     tipo = 'Nome científico';
-  } else if (genusIndex.has(norm)) {
-    rows = genusIndex.get(norm);
+  }
+  // 2. sp./spp. or bare genus
+  else if (genusIndex.has(normBase)) {
+    rows = genusIndex.get(normBase);
     tipo = 'Gênero';
-  } else if (familyIndex.has(norm)) {
+  }
+  // 3. Family exact
+  else if (familyIndex.has(norm)) {
     rows = familyIndex.get(norm);
     tipo = 'Família';
-  } else if (orderIndex.has(norm)) {
+  }
+  // 4. Order exact
+  else if (orderIndex.has(norm)) {
     rows = orderIndex.get(norm);
     tipo = 'Ordem';
-  } else if (classIndex.has(norm)) {
+  }
+  // 5. Class exact
+  else if (classIndex.has(norm)) {
     rows = classIndex.get(norm);
     tipo = 'Classe';
-  } else if (phylumIndex.has(norm)) {
+  }
+  // 6. Phylum exact
+  else if (phylumIndex.has(norm)) {
     rows = phylumIndex.get(norm);
     tipo = 'Filo';
-  } else {
+  }
+  else {
     // partial scientific
     for (const [key, arr] of scientificIndex) {
       if (key.startsWith(norm) && norm.length >= 3) {
@@ -448,15 +488,65 @@ function searchName(name) {
         if (key.includes(norm)) { rows = [...rows, ...arr]; tipo = 'Gênero (parcial)'; }
       }
     }
-    // deduplicate
     rows = [...new Map(rows.map(r => [r['scientificName'], r])).values()];
   }
 
   return { rows, tipo };
 }
 
+// ── APPLY HIERARCHY TRUNCATION ────────────────────────────────────────────────
+// Strips fields below the resolved rank and rewrites scientificName + taxonRank.
+function applyHierarchyTruncation(result, inputLevel) {
+  const r = { ...result };
+
+  if (inputLevel === 'genus') {
+    // Keep only up to genus; clear everything more specific
+    r.specificEpithet      = '';
+    r.infraspecificEpithet = '';
+    r.identificationQualifier = '';
+    r.scientificName       = r.genus || result.scientificName;
+    r.taxonRank            = 'gênero';
+  } else if (inputLevel === 'family') {
+    r.genus                = '';
+    r.specificEpithet      = '';
+    r.infraspecificEpithet = '';
+    r.identificationQualifier = '';
+    r.scientificName       = r.family || result.scientificName;
+    r.taxonRank            = 'família';
+  } else if (inputLevel === 'order') {
+    r.family               = '';
+    r.genus                = '';
+    r.specificEpithet      = '';
+    r.infraspecificEpithet = '';
+    r.identificationQualifier = '';
+    r.scientificName       = r.order || result.scientificName;
+    r.taxonRank            = 'ordem';
+  } else if (inputLevel === 'class') {
+    r.order                = '';
+    r.family               = '';
+    r.genus                = '';
+    r.specificEpithet      = '';
+    r.infraspecificEpithet = '';
+    r.identificationQualifier = '';
+    r.scientificName       = r.class || result.scientificName;
+    r.taxonRank            = 'classe';
+  } else if (inputLevel === 'phylum') {
+    r.class                = '';
+    r.order                = '';
+    r.family               = '';
+    r.genus                = '';
+    r.specificEpithet      = '';
+    r.infraspecificEpithet = '';
+    r.identificationQualifier = '';
+    r.scientificName       = r.phylum || result.scientificName;
+    r.taxonRank            = 'filo';
+  }
+
+  return r;
+}
+
 function buildResult(row, nomeDigitado, tipo) {
-  return {
+  const base = {
     nomeDigitado, tipo,
     kingdom:              row['kingdom']              || '',
     phylum:               row['phylum']               || '',
@@ -470,6 +560,13 @@ function buildResult(row, nomeDigitado, tipo) {
     scientificName:       row['scientificName']       || '',
     taxonRank:            row['taxonRank']             || '',
   };
+
+  // Detect what level the user actually intended and truncate accordingly
+  const inputLevel = detectInputLevel(nomeDigitado);
+  if (inputLevel !== 'species') {
+    return applyHierarchyTruncation(base, inputLevel);
+  }
+  return base;
 }
 
 // ── RENDER TABLE 1 ─────────────────────────────────────────────────────────
