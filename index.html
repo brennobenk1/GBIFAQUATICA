@@ -1,948 +1,1234 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Biota Aquática — Banco de Dados Taxonômico</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Code+Pro:wght@400;500&family=Lato:wght@300;400;500&display=swap" rel="stylesheet"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GBIF Darwin Core Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,400&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --blue-deep:   #0a2240;
-    --blue-mid:    #1a5f8a;
-    --blue-warm:   #2e9cc6;
-    --blue-pale:   #b8dff0;
-    --blue-ghost:  #edf7fc;
-    --cream:       #f5fbff;
-    --ink:         #0d1e2c;
-    --muted:       #5a7a8e;
-    --border:      #b8d4e4;
-    --shadow:      0 2px 16px rgba(10,34,64,0.10);
-  }
+:root {
+  --bg:       #080f0a;
+  --surf:     #0f1b12;
+  --surf2:    #162019;
+  --surf3:    #1d2b20;
+  --border:   #2a4a32;
+  --accent:   #52a96d;
+  --acl:      #9dd4ae;
+  --gold:     #d4b84a;
+  --goldd:    #a8922d;
+  --text:     #e2f0e6;
+  --textd:    #7aa488;
+  --danger:   #d95b5b;
+  --ff-d:  'Fraunces', Georgia, serif;
+  --ff-m:  'IBM Plex Mono', monospace;
+  --ff-b:  'Outfit', sans-serif;
+  --r:  6px;
+  --rl: 10px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--cream); color: var(--ink); font-family: 'Lato', sans-serif; font-weight: 300; min-height: 100vh; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-b);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
 
-  /* ── HEADER ── */
-  header {
-    background: var(--blue-deep);
-    color: white;
-    padding: 26px 40px 20px;
-    display: flex;
-    align-items: flex-end;
-    gap: 20px;
-    border-bottom: 4px solid var(--blue-warm);
-  }
-  header .logo { font-family: 'Cormorant Garamond', serif; font-size: 2.1rem; line-height: 1; letter-spacing: -0.3px; }
-  header .logo span { color: var(--blue-warm); }
-  header .subtitle { font-family: 'Source Code Pro', monospace; font-size: 0.7rem; color: var(--blue-pale); margin-bottom: 3px; letter-spacing: 0.04em; }
-  header .badge {
-    margin-left: auto;
-    font-family: 'Source Code Pro', monospace;
-    font-size: 0.68rem;
-    color: var(--blue-pale);
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 5px 12px;
-    align-self: center;
-    letter-spacing: 0.05em;
-  }
+/* ── HEADER ─────────────────────────────── */
+header {
+  position: relative;
+  padding: 36px 44px 30px;
+  background: linear-gradient(160deg, #080f0a 0%, #0f2218 60%, #0a1a0e 100%);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+header::before {
+  content:'';
+  position:absolute; top:-80px; right:-60px;
+  width:360px; height:360px;
+  background: radial-gradient(circle, rgba(82,169,109,0.12) 0%, transparent 68%);
+  pointer-events:none;
+}
+header::after {
+  content:'';
+  position:absolute; bottom:-40px; left:100px;
+  width:200px; height:200px;
+  background: radial-gradient(circle, rgba(212,184,74,0.06) 0%, transparent 70%);
+  pointer-events:none;
+}
+.header-tag {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.header-tag::before {
+  content: '';
+  display: inline-block;
+  width: 24px; height: 1px;
+  background: var(--accent);
+}
+header h1 {
+  font-family: var(--ff-d);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+header h1 em {
+  font-style: italic;
+  color: var(--acl);
+}
+header p {
+  color: var(--textd);
+  font-size: 13px;
+  margin-top: 8px;
+  max-width: 560px;
+}
 
-  main { max-width: 1500px; margin: 0 auto; padding: 32px 32px 60px; }
+/* ── CONTAINER ──────────────────────────── */
+.wrap {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 28px 44px 60px;
+}
 
-  /* ── CARDS ── */
-  .card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 26px 30px; margin-bottom: 22px; box-shadow: var(--shadow); }
-  .card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; color: var(--blue-deep); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-  .card-title::before { content: ''; display: inline-block; width: 4px; height: 18px; background: var(--blue-warm); border-radius: 2px; }
+/* ── CARD / SECTION ─────────────────────── */
+.card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
 
-  /* ── FILE ZONE ── */
-  .file-zone {
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    padding: 28px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .2s, background .2s;
-    position: relative;
-    max-width: 480px;
-    margin: 0 auto;
-  }
-  .file-zone:hover { border-color: var(--blue-warm); background: var(--blue-ghost); }
-  .file-zone.loaded { border-color: var(--blue-mid); border-style: solid; background: var(--blue-ghost); }
-  .file-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-  .file-icon { font-size: 2.4rem; margin-bottom: 8px; }
-  .file-label { font-family: 'Source Code Pro', monospace; font-size: 0.82rem; color: var(--blue-mid); font-weight: 500; }
-  .file-status { font-size: 0.75rem; color: var(--muted); margin-top: 6px; min-height: 18px; }
-  .file-status.ok { color: var(--blue-mid); font-weight: 500; }
-  .file-hint { font-size: 0.7rem; color: var(--muted); margin-top: 10px; font-family: 'Source Code Pro', monospace; }
+.card-hd {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 22px;
+  background: var(--surf2);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+}
+.card-hd:hover { background: var(--surf3); }
 
-  /* ── SEARCH ── */
-  .search-row { display: flex; gap: 16px; align-items: flex-start; }
-  textarea#names {
-    flex: 1;
-    height: 130px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
-    font-family: 'Source Code Pro', monospace;
-    font-size: 0.82rem;
-    color: var(--ink);
-    resize: vertical;
-    background: var(--blue-ghost);
-    outline: none;
-    transition: border-color .2s;
-  }
-  textarea#names:focus { border-color: var(--blue-warm); }
-  textarea#names::placeholder { color: #9ab8cc; }
+.step-num {
+  width: 26px; height: 26px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  flex-shrink: 0;
+}
 
-  .btn-col { display: flex; flex-direction: column; gap: 10px; min-width: 175px; }
+.card-title {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+}
+.card-subtitle {
+  font-size: 11px;
+  color: var(--textd);
+  font-family: var(--ff-m);
+}
 
-  button {
-    padding: 12px 18px;
-    border: none;
-    border-radius: 8px;
-    font-family: 'Lato', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background .18s, transform .1s, opacity .2s;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
-  }
-  button:active { transform: scale(0.97); }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
+.toggle-icon {
+  color: var(--textd);
+  font-size: 16px;
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.card.closed .toggle-icon { transform: rotate(-90deg); }
+.card.closed .card-body { display: none; }
 
-  #btn-search { background: var(--blue-mid); color: white; }
-  #btn-search:hover:not(:disabled) { background: var(--blue-deep); }
-  #btn-export { background: var(--blue-pale); color: var(--blue-deep); }
-  #btn-export:hover:not(:disabled) { background: var(--blue-warm); color: white; }
-  #btn-clear { background: #f0f5f9; color: var(--muted); font-size: 0.78rem; padding: 8px 16px; }
-  #btn-clear:hover:not(:disabled) { background: #dce8f0; }
+.card-body { padding: 22px; }
 
-  /* ── MODE BUTTONS ── */
-  .mode-btn { padding: 7px 17px; border: 2px solid var(--border); border-radius: 99px; background: white; color: var(--muted); font-family: 'Source Code Pro', monospace; font-size: 0.74rem; font-weight: 500; cursor: pointer; transition: all .18s; }
-  .mode-btn:hover { border-color: var(--blue-warm); color: var(--blue-mid); }
-  .mode-btn.mode-active { background: var(--blue-mid); border-color: var(--blue-mid); color: white; }
+/* ── FIELD GRID ─────────────────────────── */
+.fgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.fgrid-label {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--acl);
+  font-weight: 600;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+  font-family: var(--ff-m);
+}
+.fw { grid-column: 1 / -1; }
+.f2 { grid-column: span 2; }
 
-  /* ── STATS BAR ── */
-  #stats-bar { font-family: 'Source Code Pro', monospace; font-size: 0.76rem; color: var(--muted); margin-bottom: 10px; min-height: 20px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  #stats-bar .pill { background: var(--blue-pale); color: var(--blue-deep); border-radius: 99px; padding: 2px 10px; font-weight: 500; }
-  #stats-bar .pill.red { background: #fdd; color: #8b0000; }
+.field { display: flex; flex-direction: column; gap: 5px; }
 
-  /* ── TABLE ── */
-  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; max-height: 540px; }
-  table { border-collapse: collapse; width: max-content; min-width: 100%; font-size: 0.77rem; }
-  thead tr { background: var(--blue-deep); color: white; position: sticky; top: 0; z-index: 2; }
-  thead th { padding: 11px 13px; text-align: left; font-family: 'Source Code Pro', monospace; font-size: 0.68rem; font-weight: 500; letter-spacing: 0.04em; white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.12); }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
-  tbody tr:hover { filter: brightness(0.96); }
-  tbody tr.row-found  { background: #f0f8ff; }
-  tbody tr.row-nf     { background: #fff0f0; }
-  td { padding: 8px 13px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; border-right: 1px solid var(--border); font-family: 'Lato', sans-serif; color: var(--ink); }
-  td:first-child { font-family: 'Source Code Pro', monospace; font-size: 0.72rem; color: var(--blue-mid); font-weight: 500; }
+label.lbl {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--textd);
+  font-weight: 500;
+  display: flex; flex-direction: column; gap: 2px;
+}
+label.lbl .hint {
+  font-family: var(--ff-b);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  opacity: 0.65;
+  font-weight: 400;
+}
 
-  /* ── LOADING ── */
-  #loading { display: none; text-align: center; padding: 24px; font-family: 'Source Code Pro', monospace; font-size: 0.82rem; color: var(--blue-mid); }
-  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--blue-pale); border-top-color: var(--blue-mid); border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 8px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+input[type=text], textarea, select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--r);
+  padding: 9px 11px;
+  font-family: var(--ff-m);
+  font-size: 12px;
+  width: 100%;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+input[type=text]:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(82,169,109,0.15);
+}
+textarea { resize: vertical; min-height: 72px; }
 
-  #results-section { display: none; }
+/* ── UTM DISPLAY ────────────────────────── */
+.utm-box {
+  background: rgba(82,169,109,0.07);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 9px 11px;
+  font-family: var(--ff-m);
+  font-size: 12px;
+  color: var(--acl);
+  min-height: 38px;
+  display: flex; align-items: center;
+}
 
-  /* ── COPY BTN ── */
-  .btn-copy { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 9px 17px; background: var(--blue-deep); color: white; border: none; border-radius: 7px; font-family: 'Source Code Pro', monospace; font-size: 0.74rem; font-weight: 500; cursor: pointer; letter-spacing: 0.02em; transition: background .18s, transform .1s; }
-  .btn-copy:hover { background: var(--blue-mid); }
-  .btn-copy:active { transform: scale(0.97); }
-  .btn-copy.copied { background: #27ae60; }
+/* ── TAXONOMY HINT ──────────────────────── */
+.tax-hint {
+  background: rgba(212,184,74,0.07);
+  border: 1px solid rgba(212,184,74,0.25);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  font-size: 12px;
+  color: #d4c16a;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+.tax-hint strong { color: var(--gold); }
+.col-order {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  color: var(--acl);
+  margin-top: 6px;
+  line-height: 1.8;
+  word-break: break-all;
+}
 
-  /* ── SECTION DIVIDER ── */
-  .section-label { font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: var(--blue-deep); margin: 26px 0 10px; display: flex; align-items: center; gap: 10px; }
-  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+/* ── PER-ROW TABLE ──────────────────────── */
+.pr-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  max-height: 420px;
+  overflow-y: auto;
+}
+.pr-table { width: 100%; border-collapse: collapse; }
+.pr-table th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--surf2);
+  padding: 9px 10px;
+  text-align: left;
+  font-family: var(--ff-m);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--textd);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.pr-table td {
+  padding: 5px 7px;
+  border-bottom: 1px solid rgba(42,74,50,0.4);
+  vertical-align: middle;
+}
+.pr-table tr:last-child td { border-bottom: none; }
+.pr-table tr:hover td { background: rgba(82,169,109,0.04); }
+.pr-num {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  color: var(--textd);
+  text-align: center;
+  width: 36px;
+  padding: 0 4px;
+}
+.pr-sn {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  color: var(--acl);
+  font-style: italic;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr-table input[type=text] {
+  min-width: 90px;
+  padding: 5px 7px;
+  font-size: 11px;
+  border-radius: 4px;
+}
 
-  /* ── SUGGESTER ── */
-  .suggester-wrap { position: relative; }
-  #suggester-panel { display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: white; border: 1.5px solid var(--blue-warm); border-radius: 10px; box-shadow: 0 8px 28px rgba(10,34,64,0.18); z-index: 100; max-height: 320px; overflow-y: auto; overflow-x: hidden; }
-  #suggester-panel.visible { display: block; }
-  .sugg-header { padding: 8px 14px 6px; font-family: 'Source Code Pro', monospace; font-size: 0.65rem; letter-spacing: 0.06em; color: var(--blue-warm); text-transform: uppercase; border-bottom: 1px solid var(--border); background: var(--blue-ghost); border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center; }
-  .sugg-close { cursor: pointer; color: var(--muted); font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; border: none; background: transparent; line-height: 1; }
-  .sugg-close:hover { background: var(--border); }
-  .sugg-item { padding: 9px 14px; cursor: pointer; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; transition: background .12s; }
-  .sugg-item:last-child { border-bottom: none; }
-  .sugg-item:hover, .sugg-item.sugg-active { background: var(--blue-ghost); }
-  .sugg-scientific { font-family: 'Source Code Pro', monospace; font-size: 0.82rem; color: var(--ink); font-style: italic; }
-  .sugg-rank { font-family: 'Source Code Pro', monospace; font-size: 0.65rem; color: var(--muted); margin-left: auto; flex-shrink: 0; }
-  .sugg-empty { padding: 14px; font-family: 'Source Code Pro', monospace; font-size: 0.78rem; color: var(--muted); text-align: center; }
-  #sugg-count { font-family: 'Source Code Pro', monospace; font-size: 0.62rem; color: var(--muted); }
+/* ── BUTTONS ────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px;
+  border-radius: var(--r);
+  border: none;
+  font-family: var(--ff-b);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #44916099; filter: brightness(1.1); transform: translateY(-1px); }
+.btn-ghost {
+  background: var(--surf2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--surf3); }
+.btn-gold { background: var(--gold); color: #080f0a; }
+.btn-gold:hover { background: var(--goldd); transform: translateY(-1px); }
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  font-size: 12px;
+  padding: 7px 14px;
+}
+.btn-danger:hover { background: rgba(217,91,91,0.1); }
+
+.row-acts {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+/* ── BADGE ──────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center;
+  background: rgba(82,169,109,0.12);
+  color: var(--acl);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-family: var(--ff-m);
+}
+
+/* ── STATUS ─────────────────────────────── */
+.status {
+  padding: 9px 13px;
+  border-radius: var(--r);
+  font-size: 12px;
+  display: none;
+}
+.status.show { display: block; }
+.status.ok  { background: rgba(82,169,109,0.1);  border:1px solid var(--accent); color: var(--acl); }
+.status.err { background: rgba(217,91,91,0.1);   border:1px solid var(--danger); color: #f08080; }
+
+/* ── DIVIDER ────────────────────────────── */
+hr.div { border:none; border-top:1px solid var(--border); margin: 18px 0; }
+
+/* ── TABLE PREVIEW ──────────────────────── */
+#preview-card { display: none; }
+
+.tbl-wrap {
+  overflow: auto;
+  max-height: 480px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.tbl-wrap table {
+  border-collapse: collapse;
+  font-family: var(--ff-m);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.tbl-wrap th {
+  background: var(--surf2);
+  color: var(--acl);
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 1;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tbl-wrap td {
+  padding: 5px 10px;
+  border: 1px solid rgba(42,74,50,0.3);
+  color: var(--text);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tbl-wrap tr:nth-child(even) td { background: rgba(82,169,109,0.025); }
+.tbl-wrap tr:hover td { background: rgba(82,169,109,0.07); }
+.tbl-wrap td.empty { color: var(--textd); opacity: 0.5; }
+
+/* ── PRESET UPLOAD ──────────────────────── */
+.preset-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  border-radius: var(--rl);
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.preset-bar-label {
+  font-family: var(--ff-m);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--acl);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.preset-info {
+  font-family: var(--ff-m);
+  font-size: 11px;
+  color: var(--textd);
+  flex: 1;
+  min-width: 160px;
+}
+.preset-info.loaded { color: var(--acl); }
+.preset-file-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+}
+.preset-file-btn input[type=file] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 0;
+}
+.preset-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(212,184,74,0.10);
+  color: var(--gold);
+  border: 1px solid rgba(212,184,74,0.3);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-family: var(--ff-m);
+  white-space: nowrap;
+}
+
+/* ── EMPTY STATE ────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: var(--textd);
+  font-size: 13px;
+}
+
+/* ── SCROLLBAR ──────────────────────────── */
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+@media(max-width:768px) {
+  header, .wrap { padding-left:18px; padding-right:18px; }
+  header h1 { font-size: 1.7rem; }
+  .fgrid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 
 <header>
-  <div>
-    <div class="subtitle">Powered by Brenno Benk</div>
-    <div class="logo">Biota<span>Aquática</span></div>
-  </div>
-  <div class="badge" id="header-badge">Aguardando arquivo…</div>
+  <div class="header-tag">Darwin Core Standard</div>
+  <h1>GBIF <em>Occurrence</em> Builder</h1>
+  <p>Construção de tabelas de ocorrência no padrão Darwin Core para publicação no GBIF. Preencha os campos, cole a taxonomia e exporte.</p>
 </header>
 
-<main>
+<div class="wrap">
 
-  <!-- STEP 1: FILE -->
-  <div class="card">
-    <div class="card-title">1 · Carregar Arquivo XLSX — Banco de Dados de Biota Aquática</div>
-    <div class="file-zone" id="zone-xlsx">
-      <input type="file" id="file-xlsx" accept=".xlsx,.xls"/>
-      <div class="file-icon">🌊</div>
-      <div class="file-label">banco_aquatica.xlsx</div>
-      <div class="file-status" id="status-xlsx">Clique ou arraste o arquivo .xlsx</div>
-      <div class="file-hint">Colunas esperadas: kingdom, phylum, class, order, family, genus, specificEpithet, scientificName, taxonRank</div>
+<!-- ══════════════════════════════════════════
+     PRESET BAR
+══════════════════════════════════════════════ -->
+<div class="preset-bar">
+  <span class="preset-bar-label">🗂 Pré-definição</span>
+  <span class="preset-info" id="preset-info">Nenhum arquivo carregado — os campos globais serão preenchidos manualmente.</span>
+  <span id="preset-tag" class="preset-tag" style="display:none">✓ <span id="preset-tag-name"></span></span>
+  <div class="preset-file-btn">
+    <button class="btn btn-ghost" style="font-size:12px; padding:7px 14px;">📂 Carregar Preset (.txt / .tsv)</button>
+    <input type="file" id="preset-file" accept=".txt,.tsv,.tab">
+  </div>
+  <button class="btn btn-danger" id="preset-clear-btn" style="display:none; font-size:11px; padding:6px 12px;" onclick="clearPreset()">✕ Remover</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     CARD 1 — CAMPOS GLOBAIS
+══════════════════════════════════════════════ -->
+<div class="card" id="c1">
+  <div class="card-hd" onclick="tog('c1')">
+    <div class="step-num">1</div>
+    <div class="card-title">Campos Globais</div>
+    <div class="card-subtitle">Valores que se repetem em todas as linhas</div>
+    <div class="toggle-icon">▾</div>
+  </div>
+  <div class="card-body">
+
+    <!-- Registro -->
+    <div class="fgrid">
+      <div class="fgrid-label">Registro</div>
+      <div class="field">
+        <label class="lbl">basisOfRecord<span class="hint">Ex: HumanObservation</span></label>
+        <input type="text" id="basisOfRecord" placeholder="HumanObservation">
+      </div>
+      <div class="field">
+        <label class="lbl">modified<span class="hint">Data de modificação YYYY-MM-DD</span></label>
+        <input type="text" id="modified" placeholder="2026-01-01">
+      </div>
+      <div class="field fw">
+        <label class="lbl">datasetName<span class="hint">Nome completo do dataset</span></label>
+        <input type="text" id="datasetName" placeholder="RELATÓRIO DE MONITORAMENTO DA AVIFAUNA — ETA Piraí">
+      </div>
+      <div class="field">
+        <label class="lbl">type<span class="hint">Ex: Event</span></label>
+        <input type="text" id="type" placeholder="Event">
+      </div>
+      <div class="field">
+        <label class="lbl">language<span class="hint">Ex: pt</span></label>
+        <input type="text" id="language" placeholder="pt">
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <!-- Instituição -->
+    <div class="fgrid">
+      <div class="fgrid-label">Instituição &amp; Licença</div>
+      <div class="field">
+        <label class="lbl">institutionID<span class="hint">CNPJ ou CPF</span></label>
+        <input type="text" id="institutionID" placeholder="00.000.000/0001-00">
+      </div>
+      <div class="field">
+        <label class="lbl">institutionCode<span class="hint">Nome ou sigla</span></label>
+        <input type="text" id="institutionCode" placeholder="INST">
+      </div>
+      <div class="field">
+        <label class="lbl">license<span class="hint">Ex: CC BY NC</span></label>
+        <input type="text" id="license" placeholder="CC BY NC">
+      </div>
+      <div class="field">
+        <label class="lbl">rightsHolder<span class="hint">Titular dos direitos</span></label>
+        <input type="text" id="rightsHolder" placeholder="Nome da empresa">
+      </div>
+      <div class="field fw">
+        <label class="lbl">dynamicProperties<span class="hint">Propriedades Darwin Core específicas</span></label>
+        <textarea id="dynamicProperties" placeholder="Informações em termo darwin core específico"></textarea>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <!-- Ocorrência Global -->
+    <div class="fgrid">
+      <div class="fgrid-label">Ocorrência</div>
+      <div class="field fw">
+        <label class="lbl">occurrenceID — prefixo<span class="hint">O número de cada linha será adicionado automaticamente. Ex: BR:EMPRESA:LOCAL:</span></label>
+        <input type="text" id="occurrenceID_prefix" placeholder="BR:EMPRESA:LOCAL:">
+      </div>
+      <div class="field fw">
+        <label class="lbl">recordedBy<span class="hint">Nomes separados por &amp;</span></label>
+        <input type="text" id="recordedBy" placeholder="Nome A &amp; Nome B &amp; Nome C">
+      </div>
+      <div class="field fw">
+        <label class="lbl">associatedMedia<span class="hint">Links separados por |</span></label>
+        <textarea id="associatedMedia" placeholder="https://link1.com | https://link2.com"></textarea>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <!-- Evento -->
+    <div class="fgrid">
+      <div class="fgrid-label">Evento &amp; Amostragem</div>
+      <div class="field">
+        <label class="lbl">eventDate<span class="hint">YYYY-MM-DD</span></label>
+        <input type="text" id="eventDate" placeholder="2026-01-01">
+      </div>
+      <div class="field">
+        <label class="lbl">habitat<span class="hint">Ex: Mata Atlântica</span></label>
+        <input type="text" id="habitat" placeholder="Mata Atlântica">
+      </div>
+      <div class="field fw">
+        <label class="lbl">samplingProtocol</label>
+        <input type="text" id="samplingProtocol" placeholder="Levantamento ativo em diferentes pontos">
+      </div>
+      <div class="field fw">
+        <label class="lbl">samplingEffort</label>
+        <input type="text" id="samplingEffort" placeholder="40 armadilhas-noite | 10 observadores-hora | 10 km a pé">
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <!-- Localização -->
+    <div class="fgrid">
+      <div class="fgrid-label">Localização Geográfica</div>
+      <div class="field">
+        <label class="lbl">continent</label>
+        <input type="text" id="continent" placeholder="América do Sul">
+      </div>
+      <div class="field">
+        <label class="lbl">country</label>
+        <input type="text" id="country" placeholder="Brasil">
+      </div>
+      <div class="field">
+        <label class="lbl">countryCode<span class="hint">Sigla ISO</span></label>
+        <input type="text" id="countryCode" placeholder="BR">
+      </div>
+      <div class="field">
+        <label class="lbl">stateProvince<span class="hint">Estado / Província</span></label>
+        <input type="text" id="stateProvince" placeholder="Santa Catarina">
+      </div>
+      <div class="field">
+        <label class="lbl">county<span class="hint">Município</span></label>
+        <input type="text" id="county" placeholder="Joinville">
+      </div>
+      <div class="field">
+        <label class="lbl">waterBody<span class="hint">Corpo d'água mais próximo</span></label>
+        <input type="text" id="waterBody" placeholder="Rio Piraí">
+      </div>
+      <div class="field fw">
+        <label class="lbl">locality<span class="hint">Localidade do levantamento</span></label>
+        <textarea id="locality" placeholder="Ao decorrer da trajetória do Rio Piraí nas proximidades da ETA PIRAÍ, bairro Vila Nova"></textarea>
+      </div>
+      <div class="field fw">
+        <label class="lbl">locationRemarks<span class="hint">Endereço completo do local</span></label>
+        <textarea id="locationRemarks" placeholder="Estrada dos Morros, s/n – Zona Rural, Bairro Vila Nova, Joinville – SC."></textarea>
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <!-- Coordenadas -->
+    <div class="fgrid">
+      <div class="fgrid-label">Coordenadas</div>
+      <div class="field">
+        <label class="lbl">decimalLatitude<span class="hint">Padrão Google Maps</span></label>
+        <input type="text" id="decimalLatitude" placeholder="-26.247400" oninput="calcUTM()">
+      </div>
+      <div class="field">
+        <label class="lbl">decimalLongitude<span class="hint">Padrão Google Maps</span></label>
+        <input type="text" id="decimalLongitude" placeholder="-48.982000" oninput="calcUTM()">
+      </div>
+      <div class="field">
+        <label class="lbl">verbatimLatitude<span class="hint">Calculado automaticamente (UTM Northing)</span></label>
+        <div class="utm-box" id="utm_lat">—</div>
+      </div>
+      <div class="field">
+        <label class="lbl">verbatimLongitude<span class="hint">Calculado automaticamente (UTM Easting)</span></label>
+        <div class="utm-box" id="utm_lon">—</div>
+      </div>
+      <div class="field">
+        <label class="lbl">geodeticDatum</label>
+        <input type="text" id="geodeticDatum" placeholder="SIRGAS 2000">
+      </div>
+      <div class="field">
+        <label class="lbl">georeferenceProtocol</label>
+        <input type="text" id="georeferenceProtocol" placeholder="GPS de campo">
+      </div>
+    </div>
+
+    <hr class="div">
+
+    <!-- Identificação -->
+    <div class="fgrid">
+      <div class="fgrid-label">Identificação</div>
+      <div class="field fw">
+        <label class="lbl">identifiedBy<span class="hint">Nomes separados por &amp;</span></label>
+        <input type="text" id="identifiedBy" placeholder="Nome A &amp; Nome B">
+      </div>
+      <div class="field">
+        <label class="lbl">dateIdentified<span class="hint">YYYY-MM-DD</span></label>
+        <input type="text" id="dateIdentified" placeholder="2026-01-01">
+      </div>
+      <div class="field fw">
+        <label class="lbl">identificationRemarks</label>
+        <textarea id="identificationRemarks" placeholder="Espécie X diferenciada de espécie Y pelo comprimento das unhas"></textarea>
+      </div>
+    </div>
+
+  </div><!-- /card-body -->
+</div><!-- /card -->
+
+<!-- ══════════════════════════════════════════
+     CARD 2 — TAXONOMIA
+══════════════════════════════════════════════ -->
+<div class="card" id="c2">
+  <div class="card-hd" onclick="tog('c2')">
+    <div class="step-num">2</div>
+    <div class="card-title">Taxonomia</div>
+    <div class="card-subtitle">Cole a tabela com dados taxonômicos (sem cabeçalho)</div>
+    <div class="toggle-icon">▾</div>
+  </div>
+  <div class="card-body">
+
+    <div class="tax-hint">
+      <strong>⚠ Ordem obrigatória das colunas (separadas por TAB, sem cabeçalho):</strong>
+      <div class="col-order">
+        kingdom &nbsp;·&nbsp; phylum &nbsp;·&nbsp; class &nbsp;·&nbsp; order &nbsp;·&nbsp; family &nbsp;·&nbsp; genus &nbsp;·&nbsp;
+        specificEpithet &nbsp;·&nbsp; infraspecificEpithet &nbsp;·&nbsp; identificationQualifier &nbsp;·&nbsp;
+        scientificName &nbsp;·&nbsp; vernacularName &nbsp;·&nbsp; taxonRank &nbsp;·&nbsp; taxonRemarks
+      </div>
+      <div style="margin-top:6px; font-size:11px; opacity:0.8;">
+        Cada linha = 1 registro. O número de linhas define o total de ocorrências na tabela final.
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:14px;">
+      <label class="lbl">Cole a tabela aqui</label>
+      <textarea id="taxPaste" style="min-height:160px; font-size:11px;" placeholder="Animalia	Chordata	Aves	Tinamiformes	Tinamidae	Tinamus	solitarius		X X	Tinamus solitarius	macuco	espécie	"></textarea>
+    </div>
+
+    <div class="row-acts">
+      <button class="btn btn-ghost" onclick="parseTax()">🔍 Processar Taxonomia</button>
+      <span id="tax-badge" class="badge" style="display:none">0 linhas</span>
+    </div>
+    <div class="status" id="tax-status"></div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     CARD 3 — CAMPOS POR LINHA
+══════════════════════════════════════════════ -->
+<div class="card" id="c3">
+  <div class="card-hd" onclick="tog('c3')">
+    <div class="step-num">3</div>
+    <div class="card-title">Campos por Linha</div>
+    <div class="card-subtitle">individualCount · sex · establishmentMeans · occurrenceRemarks</div>
+    <div class="toggle-icon">▾</div>
+  </div>
+  <div class="card-body">
+    <p style="color:var(--textd); font-size:12px; margin-bottom:14px;">
+      Preencha apenas a 1ª linha para repetir o mesmo valor em todos os registros.<br>
+      <strong style="color:var(--text)">individualCount</strong> padrão = <strong style="color:var(--acl)">1</strong> quando vazio.
+    </p>
+    <div id="pr-container">
+      <div class="empty-state">↑ Processe a taxonomia (Seção 2) para ativar esta seção.</div>
     </div>
   </div>
+</div>
 
-  <!-- STEP 2: SEARCH -->
-  <div class="card">
-    <div class="card-title">2 · Buscar Táxons por Nome Científico, Gênero, Família ou Ordem</div>
-    <div class="search-row">
-      <div class="suggester-wrap" style="flex:1;display:flex;flex-direction:column;">
-        <textarea id="names" placeholder="Cole aqui os nomes, um por linha...&#10;Ex: Navicula lanceolata&#10;Chaetoceros&#10;Chironomidae&#10;Actinopterygii"></textarea>
-        <div id="suggester-panel" role="listbox" aria-label="Sugestões de táxons">
-          <div class="sugg-header">
-            <span>🔎 Sugestões</span>
-            <span id="sugg-count"></span>
-            <button class="sugg-close" onclick="closeSuggester()" title="Fechar">✕</button>
-          </div>
-          <div id="sugg-list"></div>
-        </div>
-      </div>
-      <div class="btn-col">
-        <button id="btn-search" disabled onclick="runSearch()">🔍 Buscar</button>
-        <button id="btn-export" disabled onclick="exportExcel()">📥 Exportar Excel</button>
-        <button id="btn-clear" onclick="clearResults()">✕ Limpar</button>
-      </div>
-    </div>
+<!-- ══════════════════════════════════════════
+     AÇÕES PRINCIPAIS
+══════════════════════════════════════════════ -->
+<div class="row-acts" style="margin:18px 0 4px;">
+  <button class="btn btn-primary" onclick="genTable()">⚡ Gerar Tabela</button>
+  <button class="btn btn-danger" onclick="clearAll()">🗑 Limpar Tudo</button>
+  <div class="status" id="gen-status" style="display:inline-flex; align-items:center;"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     CARD 4 — PRÉ-VISUALIZAÇÃO
+══════════════════════════════════════════════ -->
+<div class="card" id="preview-card">
+  <div class="card-hd" onclick="tog('preview-card')">
+    <div class="step-num">4</div>
+    <div class="card-title">Pré-visualização</div>
+    <div class="card-subtitle" id="preview-info">—</div>
+    <div class="toggle-icon">▾</div>
   </div>
-
-  <!-- LOADING -->
-  <div id="loading"><span class="spinner"></span>Processando...</div>
-
-  <!-- RESULTS -->
-  <div id="results-section">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-      <span style="font-family:'Source Code Pro',monospace;font-size:0.73rem;color:var(--muted);">MODO DE EXIBIÇÃO</span>
-      <button id="btn-mode-one" class="mode-btn mode-active" onclick="setMode('one')">1 por linha</button>
-      <button id="btn-mode-all" class="mode-btn" onclick="setMode('all')">Todos os resultados</button>
+  <div class="card-body">
+    <div class="row-acts" style="margin-bottom:14px;">
+      <button class="btn btn-gold" onclick="doExport('tsv')">⬇ Exportar TSV (GBIF)</button>
+      <button class="btn btn-ghost" onclick="doExport('csv')">⬇ Exportar CSV</button>
     </div>
-    <div id="stats-bar"></div>
-
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="table-wrap">
-        <table id="result-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Busca</th>
-              <th>Tipo</th>
-              <th>Kingdom</th>
-              <th>Phylum</th>
-              <th>Class</th>
-              <th>Order</th>
-              <th>Family</th>
-              <th>Genus</th>
-              <th>Specific Epithet</th>
-              <th>Infraspecific Epithet</th>
-              <th>Identification Qualifier</th>
-              <th>Scientific Name</th>
-              <th>taxonRank</th>
-            </tr>
-          </thead>
-          <tbody id="result-body"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div style="margin-top:8px;">
-      <button class="btn-copy" id="btn-copy-1" onclick="copyTable(1)">📋 Copiar Tabela para Excel</button>
-    </div>
-
-    <!-- TABLE 2: DwC -->
-    <div class="section-label">Tabela 2 · Formato Darwin Core</div>
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="table-wrap">
-        <table id="result-table2">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>kingdom</th>
-              <th>phylum</th>
-              <th>class</th>
-              <th>order</th>
-              <th>family</th>
-              <th>genus</th>
-              <th>specificEpithet</th>
-              <th>infraspecificEpithet</th>
-              <th>identificationQualifier</th>
-              <th>scientificName</th>
-              <th>taxonRank</th>
-            </tr>
-          </thead>
-          <tbody id="result-body2"></tbody>
-        </table>
-      </div>
-    </div>
-    <div style="margin-bottom:28px;">
-      <button class="btn-copy" id="btn-copy-2" onclick="copyTable(2)">📋 Copiar Tabela 2 (DwC) para Excel</button>
-    </div>
+    <div class="tbl-wrap" id="tbl-wrap"></div>
   </div>
+</div>
 
-</main>
+</div><!-- /wrap -->
 
 <script>
-// ── STATE ──────────────────────────────────────────────────────────────────
-let rawData = [];
-let dataLoaded = false;
-let lastResults = [];
-let displayMode = 'one';
+// ══════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════
+const COLS = [
+  'basisOfRecord','modified','datasetName','type','language',
+  'institutionID','institutionCode','license','rightsHolder','dynamicProperties',
+  'occurrenceID','recordedBy','recordNumber','associatedMedia',
+  'individualCount','sex','establishmentMeans','occurrenceRemarks',
+  'eventDate','habitat','samplingProtocol','samplingEffort',
+  'continent','country','countryCode','stateProvince','county','waterBody',
+  'locality','locationRemarks',
+  'verbatimLatitude','verbatimLongitude','decimalLatitude','decimalLongitude',
+  'geodeticDatum','georeferenceProtocol',
+  'kingdom','phylum','class','order','family','genus',
+  'specificEpithet','infraspecificEpithet','identificationQualifier',
+  'scientificName','vernacularName','taxonRank','taxonRemarks',
+  'identifiedBy','dateIdentified','identificationRemarks'
+];
 
-// Indexes
-let scientificIndex = new Map();
-let genusIndex      = new Map();
-let familyIndex     = new Map();
-let orderIndex      = new Map();
-let classIndex      = new Map();
-let phylumIndex     = new Map();
+const TAX_COLS = [
+  'kingdom','phylum','class','order','family','genus',
+  'specificEpithet','infraspecificEpithet','identificationQualifier',
+  'scientificName','vernacularName','taxonRank','taxonRemarks'
+];
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-function normalize(s) {
-  if (!s) return '';
-  return String(s).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const PER_ROW_COLS = ['individualCount','sex','establishmentMeans','occurrenceRemarks'];
+
+const GLOBAL_IDS = [
+  'basisOfRecord','modified','datasetName','type','language',
+  'institutionID','institutionCode','license','rightsHolder','dynamicProperties',
+  'recordedBy','associatedMedia',
+  'eventDate','habitat','samplingProtocol','samplingEffort',
+  'continent','country','countryCode','stateProvince','county','waterBody',
+  'locality','locationRemarks',
+  'decimalLatitude','decimalLongitude',
+  'geodeticDatum','georeferenceProtocol',
+  'identifiedBy','dateIdentified','identificationRemarks'
+];
+
+let taxRows   = [];
+let tableData = [];
+let utmCache  = { lat:'', lon:'' };
+
+// ══════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════
+function tog(id) {
+  document.getElementById(id).classList.toggle('closed');
+}
+
+function gv(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function showSt(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'status ' + type + ' show';
+  el.style.display = 'block';
+  if (type === 'ok') setTimeout(() => { el.className='status'; el.style.display='none'; }, 5000);
 }
 
 function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
 }
 
-function cell(v, extra) {
-  const s = v ? String(v).trim() : '';
-  if (!s || s === 'NaN' || s === 'nan') return `<td${extra||''}>—</td>`;
-  const title = s.length > 40 ? ` title="${esc(s)}"` : '';
-  return `<td${title}${extra||''}>${esc(s)}</td>`;
+// ══════════════════════════════════════════
+// UTM CONVERSION (WGS84 → UTM)
+// ══════════════════════════════════════════
+function toUTM(lat, lon) {
+  const a  = 6378137.0;
+  const f  = 1/298.257223563;
+  const b  = a*(1-f);
+  const e2 = 1 - (b*b)/(a*a);
+  const ep2= e2/(1-e2);
+  const k0 = 0.9996;
+
+  const zone  = Math.floor((lon+180)/6)+1;
+  const lon0  = ((zone-1)*6 - 180 + 3) * Math.PI/180;
+
+  const φ  = lat * Math.PI/180;
+  const λ  = lon * Math.PI/180;
+
+  const N = a / Math.sqrt(1 - e2*Math.sin(φ)**2);
+  const T = Math.tan(φ)**2;
+  const C = ep2 * Math.cos(φ)**2;
+  const A = Math.cos(φ) * (λ - lon0);
+
+  const M = a*(
+    (1 - e2/4 - 3*e2**2/64 - 5*e2**3/256)*φ
+    - (3*e2/8 + 3*e2**2/32 + 45*e2**3/1024)*Math.sin(2*φ)
+    + (15*e2**2/256 + 45*e2**3/1024)*Math.sin(4*φ)
+    - (35*e2**3/3072)*Math.sin(6*φ)
+  );
+
+  const E = Math.round(
+    k0*N*(
+      A + (1-T+C)*A**3/6
+      + (5-18*T+T**2+72*C-58*ep2)*A**5/120
+    ) + 500000
+  );
+
+  let Nv = k0*(
+    M + N*Math.tan(φ)*(
+      A**2/2
+      + (5-T+9*C+4*C**2)*A**4/24
+      + (61-58*T+T**2+600*C-330*ep2)*A**6/720
+    )
+  );
+  if (lat < 0) Nv += 10000000;
+  Nv = Math.round(Nv);
+
+  return { E, N: Nv, zone };
 }
 
-// ── FILE LOADING ──────────────────────────────────────────────────────────────
-const fileInput = document.getElementById('file-xlsx');
-const zone      = document.getElementById('zone-xlsx');
-const statusEl  = document.getElementById('status-xlsx');
-
-fileInput.addEventListener('change', () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-  statusEl.textContent = 'Lendo arquivo…';
-  statusEl.className = 'file-status';
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const wsName = wb.SheetNames[0];
-      const ws = wb.Sheets[wsName];
-      rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-      buildIndexes();
-      dataLoaded = true;
-      zone.classList.add('loaded');
-      statusEl.textContent = `✅ ${rawData.length.toLocaleString('pt-BR')} registros carregados (aba: ${wsName})`;
-      statusEl.className = 'file-status ok';
-      document.getElementById('header-badge').textContent = `${rawData.length.toLocaleString('pt-BR')} táxons`;
-      document.getElementById('btn-search').disabled = false;
-      const ta = document.getElementById('names');
-      if (ta.value.trim()) runLiveSearch();
-    } catch(err) {
-      statusEl.textContent = '❌ Erro ao ler: ' + err.message;
-    }
-  };
-  reader.readAsArrayBuffer(file);
-});
-
-// ── BUILD INDEXES ─────────────────────────────────────────────────────────────
-function buildIndexes() {
-  scientificIndex.clear();
-  genusIndex.clear();
-  familyIndex.clear();
-  orderIndex.clear();
-  classIndex.clear();
-  phylumIndex.clear();
-
-  for (const row of rawData) {
-    // Scientific name
-    const sn = normalize(row['scientificName']);
-    if (sn) {
-      if (!scientificIndex.has(sn)) scientificIndex.set(sn, []);
-      scientificIndex.get(sn).push(row);
-    }
-    // Genus
-    const gen = normalize(row['genus']);
-    if (gen) {
-      if (!genusIndex.has(gen)) genusIndex.set(gen, []);
-      genusIndex.get(gen).push(row);
-    }
-    // Family
-    const fam = normalize(row['family']);
-    if (fam) {
-      if (!familyIndex.has(fam)) familyIndex.set(fam, []);
-      familyIndex.get(fam).push(row);
-    }
-    // Order
-    const ord = normalize(row['order']);
-    if (ord) {
-      if (!orderIndex.has(ord)) orderIndex.set(ord, []);
-      orderIndex.get(ord).push(row);
-    }
-    // Class
-    const cls = normalize(row['class']);
-    if (cls) {
-      if (!classIndex.has(cls)) classIndex.set(cls, []);
-      classIndex.get(cls).push(row);
-    }
-    // Phylum
-    const phy = normalize(row['phylum']);
-    if (phy) {
-      if (!phylumIndex.has(phy)) phylumIndex.set(phy, []);
-      phylumIndex.get(phy).push(row);
-    }
+function calcUTM() {
+  const lat = parseFloat(gv('decimalLatitude'));
+  const lon = parseFloat(gv('decimalLongitude'));
+  const elLat = document.getElementById('utm_lat');
+  const elLon = document.getElementById('utm_lon');
+  if (!isNaN(lat) && !isNaN(lon)) {
+    const u = toUTM(lat, lon);
+    utmCache = { lat: `${u.N} N`, lon: `${u.E} E` };
+    elLat.textContent = utmCache.lat;
+    elLon.textContent = utmCache.lon;
+  } else {
+    utmCache = { lat:'', lon:'' };
+    elLat.textContent = '—';
+    elLon.textContent = '—';
   }
 }
 
-// ── DETECT INPUT LEVEL ────────────────────────────────────────────────────────
-// Returns the "intent rank" of what the user typed, independent of what the DB found.
-// e.g. "Eunotia sp."      → 'genus'   (genus + sp.)
-// e.g. "Chironomidae sp." → 'family'  (family + sp.)
-// e.g. "Naviculales sp."  → 'order'   (order + sp.)
-// e.g. "Bacillariophyceae sp." → 'class'
-// e.g. "Arthropoda sp."   → 'phylum'
-// e.g. "Chironomidae"     → 'family'  (single word matched to family index)
-function detectInputLevel(name) {
-  const trimmed = name.trim();
-  const normTrimmed = normalize(trimmed);
+// ══════════════════════════════════════════
+// TAXONOMY PARSE
+// ══════════════════════════════════════════
+function parseTax() {
+  const raw = document.getElementById('taxPaste').value.trim();
+  if (!raw) { showSt('tax-status','Cole os dados de taxonomia antes de processar.','err'); return; }
 
-  // ── sp. / spp. suffix — check what rank the base name belongs to
-  const spSuffixMatch = trimmed.match(/^(.+?)\s+sp\.?p?\.?$/i);
-  if (spSuffixMatch) {
-    const base = normalize(spSuffixMatch[1].trim());
-    // Check base against higher-rank indexes first (more specific wins)
-    if (phylumIndex.has(base))  return 'phylum';
-    if (classIndex.has(base))   return 'class';
-    if (orderIndex.has(base))   return 'order';
-    if (familyIndex.has(base))  return 'family';
-    // Default sp. to genus (original behaviour for unknown base)
-    return 'genus';
-  }
+  const lines = raw.split('\n').filter(l => l.trim() !== '');
+  taxRows = lines.map(line => {
+    const c = line.split('\t');
+    const o = {};
+    TAX_COLS.forEach((col,i) => o[col] = (c[i]||'').trim());
+    return o;
+  });
 
-  // ── single word checks against known indexes (exact)
-  const words = trimmed.split(/\s+/);
-  if (words.length === 1) {
-    if (familyIndex.has(normTrimmed)) return 'family';
-    if (orderIndex.has(normTrimmed))  return 'order';
-    if (classIndex.has(normTrimmed))  return 'class';
-    if (phylumIndex.has(normTrimmed)) return 'phylum';
-    if (genusIndex.has(normTrimmed))  return 'genus';
-  }
+  renderPerRow();
 
-  return 'species'; // default — treat as full scientific name
+  const badge = document.getElementById('tax-badge');
+  badge.style.display = 'inline-flex';
+  badge.textContent = `${taxRows.length} linha${taxRows.length!==1?'s':''} carregada${taxRows.length!==1?'s':''}`;
+
+  showSt('tax-status', `✓ ${taxRows.length} registro(s) taxonômico(s) processado(s).`, 'ok');
 }
 
-// ── SEARCH ────────────────────────────────────────────────────────────────────
-function searchName(name) {
-  const trimmed = name.trim();
-  const norm = normalize(trimmed);
-
-  // Extract base when there's a sp./spp. suffix
-  const spSuffixMatch = trimmed.match(/^(.+?)\s+sp\.?p?\.?$/i);
-  const normBase = spSuffixMatch ? normalize(spSuffixMatch[1].trim()) : norm;
-  const hasSpSuffix = !!spSuffixMatch;
-
-  let rows = [], tipo = '';
-
-  // 1. sp./spp. suffix: route to the correct rank index based on base name
-  if (hasSpSuffix) {
-    if (phylumIndex.has(normBase)) {
-      rows = phylumIndex.get(normBase);
-      tipo = 'Filo (sp.)';
-    } else if (classIndex.has(normBase)) {
-      rows = classIndex.get(normBase);
-      tipo = 'Classe (sp.)';
-    } else if (orderIndex.has(normBase)) {
-      rows = orderIndex.get(normBase);
-      tipo = 'Ordem (sp.)';
-    } else if (familyIndex.has(normBase)) {
-      rows = familyIndex.get(normBase);
-      tipo = 'Família (sp.)';
-    } else if (genusIndex.has(normBase)) {
-      rows = genusIndex.get(normBase);
-      tipo = 'Gênero';
-    }
-  }
-  // 2. Exact scientific name (no sp. suffix)
-  else if (scientificIndex.has(norm)) {
-    rows = scientificIndex.get(norm);
-    tipo = 'Nome científico';
-  }
-  // 3. Bare genus
-  else if (genusIndex.has(norm)) {
-    rows = genusIndex.get(norm);
-    tipo = 'Gênero';
-  }
-  // 4. Family exact
-  else if (familyIndex.has(norm)) {
-    rows = familyIndex.get(norm);
-    tipo = 'Família';
-  }
-  // 5. Order exact
-  else if (orderIndex.has(norm)) {
-    rows = orderIndex.get(norm);
-    tipo = 'Ordem';
-  }
-  // 6. Class exact
-  else if (classIndex.has(norm)) {
-    rows = classIndex.get(norm);
-    tipo = 'Classe';
-  }
-  // 7. Phylum exact
-  else if (phylumIndex.has(norm)) {
-    rows = phylumIndex.get(norm);
-    tipo = 'Filo';
-  }
-  else {
-    // partial scientific
-    for (const [key, arr] of scientificIndex) {
-      if (key.startsWith(norm) && norm.length >= 3) {
-        rows = [...rows, ...arr];
-        tipo = 'Nome cient. (parcial)';
-      }
-    }
-    if (!rows.length && norm.length >= 4) {
-      for (const [key, arr] of genusIndex) {
-        if (key.includes(norm)) { rows = [...rows, ...arr]; tipo = 'Gênero (parcial)'; }
-      }
-    }
-    rows = [...new Map(rows.map(r => [r['scientificName'], r])).values()];
+// ══════════════════════════════════════════
+// PER-ROW INPUTS RENDER
+// ══════════════════════════════════════════
+function renderPerRow() {
+  const c = document.getElementById('pr-container');
+  if (taxRows.length === 0) {
+    c.innerHTML = '<div class="empty-state">↑ Processe a taxonomia primeiro.</div>';
+    return;
   }
 
-  return { rows, tipo };
-}
+  let h = `<div class="pr-wrap"><table class="pr-table"><thead><tr>
+    <th>#</th>
+    <th>scientificName</th>
+    <th>individualCount</th>
+    <th>sex</th>
+    <th>establishmentMeans</th>
+    <th>occurrenceRemarks</th>
+  </tr></thead><tbody>`;
 
-// ── APPLY HIERARCHY TRUNCATION ────────────────────────────────────────────────
-// Strips fields below the resolved rank and rewrites scientificName + taxonRank.
-function applyHierarchyTruncation(result, inputLevel) {
-  const r = { ...result };
-
-  if (inputLevel === 'genus') {
-    // Keep only up to genus; clear everything more specific
-    r.specificEpithet      = '';
-    r.infraspecificEpithet = '';
-    r.identificationQualifier = '';
-    r.scientificName       = r.genus || result.scientificName;
-    r.taxonRank            = 'gênero';
-  } else if (inputLevel === 'family') {
-    r.genus                = '';
-    r.specificEpithet      = '';
-    r.infraspecificEpithet = '';
-    r.identificationQualifier = '';
-    r.scientificName       = r.family || result.scientificName;
-    r.taxonRank            = 'família';
-  } else if (inputLevel === 'order') {
-    r.family               = '';
-    r.genus                = '';
-    r.specificEpithet      = '';
-    r.infraspecificEpithet = '';
-    r.identificationQualifier = '';
-    r.scientificName       = r.order || result.scientificName;
-    r.taxonRank            = 'ordem';
-  } else if (inputLevel === 'class') {
-    r.order                = '';
-    r.family               = '';
-    r.genus                = '';
-    r.specificEpithet      = '';
-    r.infraspecificEpithet = '';
-    r.identificationQualifier = '';
-    r.scientificName       = r.class || result.scientificName;
-    r.taxonRank            = 'classe';
-  } else if (inputLevel === 'phylum') {
-    r.class                = '';
-    r.order                = '';
-    r.family               = '';
-    r.genus                = '';
-    r.specificEpithet      = '';
-    r.infraspecificEpithet = '';
-    r.identificationQualifier = '';
-    r.scientificName       = r.phylum || result.scientificName;
-    r.taxonRank            = 'filo';
-  }
-
-  return r;
-}
-
-function buildResult(row, nomeDigitado, tipo) {
-  const base = {
-    nomeDigitado, tipo,
-    kingdom:              row['kingdom']              || '',
-    phylum:               row['phylum']               || '',
-    class:                row['class']                || '',
-    order:                row['order']                || '',
-    family:               row['family']               || '',
-    genus:                row['genus']                || '',
-    specificEpithet:      row['specificEpithet']      || '',
-    infraspecificEpithet: row['infraspecificEpithet'] || '',
-    identificationQualifier: row['identificationQualifier'] || '',
-    scientificName:       row['scientificName']       || '',
-    taxonRank:            row['taxonRank']             || '',
-  };
-
-  // Detect what level the user actually intended and truncate accordingly
-  const inputLevel = detectInputLevel(nomeDigitado);
-  if (inputLevel !== 'species') {
-    return applyHierarchyTruncation(base, inputLevel);
-  }
-  return base;
-}
-
-// ── RENDER TABLE 1 ─────────────────────────────────────────────────────────
-function renderTable(rows) {
-  const tbody = document.getElementById('result-body');
-  if (!rows.length) { tbody.innerHTML = ''; return; }
-  const html = rows.map((r, i) => {
-    const rowClass = r.statusBusca === 'Nao encontrado' ? 'row-nf' : 'row-found';
-    return `<tr class="${rowClass}">
-      <td>${i+1}</td>
-      ${cell(r.nomeDigitado)}
-      <td><span style="font-family:'Source Code Pro',monospace;font-size:0.7rem;color:var(--blue-mid)">${esc(r.tipo)}</span></td>
-      ${cell(r.kingdom)}
-      ${cell(r.phylum)}
-      ${cell(r.class)}
-      ${cell(r.order)}
-      ${cell(r.family)}
-      <td style="font-style:italic">${esc(r.genus)||'—'}</td>
-      <td style="font-style:italic">${esc(r.specificEpithet)||'—'}</td>
-      ${cell(r.infraspecificEpithet)}
-      ${cell(r.identificationQualifier)}
-      <td style="font-style:italic;font-weight:500">${esc(r.scientificName)||'—'}</td>
-      ${cell(r.taxonRank)}
+  taxRows.forEach((row,i) => {
+    h += `<tr>
+      <td class="pr-num">${i+1}</td>
+      <td class="pr-sn">${esc(row.scientificName||'—')}</td>
+      <td><input type="text" id="pr_individualCount_${i}" placeholder="1"></td>
+      <td><input type="text" id="pr_sex_${i}" placeholder=""></td>
+      <td><input type="text" id="pr_establishmentMeans_${i}" placeholder="nativa"></td>
+      <td><input type="text" id="pr_occurrenceRemarks_${i}" placeholder="Avistado"></td>
     </tr>`;
   });
-  tbody.innerHTML = html.join('');
+
+  h += '</tbody></table></div>';
+  c.innerHTML = h;
 }
 
-// ── RENDER TABLE 2 (DwC) ─────────────────────────────────────────────────
-function renderTable2(rows) {
-  const tbody = document.getElementById('result-body2');
-  if (!rows.length) { tbody.innerHTML = ''; return; }
-  const html = rows.map((r, i) => `<tr>
-    <td>${i+1}</td>
-    ${cell(r.kingdom)}
-    ${cell(r.phylum)}
-    ${cell(r.class)}
-    ${cell(r.order)}
-    ${cell(r.family)}
-    <td style="font-style:italic">${esc(r.genus)||'—'}</td>
-    <td style="font-style:italic">${esc(r.specificEpithet)||'—'}</td>
-    ${cell(r.infraspecificEpithet)}
-    ${cell(r.identificationQualifier)}
-    <td style="font-style:italic;font-weight:500">${esc(r.scientificName)||'—'}</td>
-    ${cell(r.taxonRank)}
-  </tr>`);
-  tbody.innerHTML = html.join('');
+function getPR(field, i) {
+  const el = document.getElementById(`pr_${field}_${i}`);
+  return el ? el.value.trim() : '';
 }
 
-// ── STATS ──────────────────────────────────────────────────────────────────
-function renderStats(total, found, notFound) {
-  const bar = document.getElementById('stats-bar');
-  bar.innerHTML = `
-    <span>Consultas: <span class="pill">${total}</span></span>
-    <span>Encontradas: <span class="pill">${found}</span></span>
-    ${notFound ? `<span>Não encontradas: <span class="pill red">${notFound}</span></span>` : ''}
-  `;
-}
-
-// ── MAIN SEARCH ─────────────────────────────────────────────────────────────
-function runSearch() {
-  const btn = document.getElementById('btn-search');
-  btn.disabled = true;
-  document.getElementById('loading').style.display = 'block';
-  setTimeout(() => {
-    doSearch();
-    document.getElementById('loading').style.display = 'none';
-    btn.disabled = false;
-  }, 30);
-}
-
-function doSearch() {
-  if (!dataLoaded) return;
-  const names = document.getElementById('names').value.split('\n').map(s => s.trim()).filter(Boolean);
-  if (!names.length) { clearResults(); return; }
-
-  lastResults = [];
-  let found = 0, notFound = 0;
-
-  for (const name of names) {
-    const { rows, tipo } = searchName(name);
-    if (!rows.length) {
-      notFound++;
-      lastResults.push({
-        nomeDigitado: name, tipo: 'Não encontrado', statusBusca: 'Nao encontrado',
-        kingdom:'', phylum:'', class:'', order:'', family:'',
-        genus:'', specificEpithet:'', infraspecificEpithet:'',
-        identificationQualifier:'', scientificName:'', taxonRank:''
-      });
-    } else {
-      found += rows.length;
-      for (const row of rows) {
-        const r = buildResult(row, name, tipo);
-        r.statusBusca = 'encontrado';
-        lastResults.push(r);
-      }
-    }
+// ══════════════════════════════════════════
+// GENERATE TABLE
+// ══════════════════════════════════════════
+function genTable() {
+  if (taxRows.length === 0) {
+    showSt('gen-status','⚠ Processe a taxonomia primeiro (Seção 2).','err');
+    return;
   }
 
-  const display = getDisplayRows(lastResults);
-  renderTable(display);
-  renderTable2(display);
-  renderStats(names.length, found, notFound);
-  document.getElementById('results-section').style.display = 'block';
-  document.getElementById('btn-export').disabled = false;
-}
+  // Global values map
+  const g = {};
+  GLOBAL_IDS.forEach(id => g[id] = gv(id));
 
-function runLiveSearch() {
-  if (!dataLoaded) return;
-  const names = document.getElementById('names').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  if (!names.length) { clearResults(); return; }
-  doSearch();
-}
+  const prefix = gv('occurrenceID_prefix');
 
-// ── DISPLAY MODE ───────────────────────────────────────────────────────────
-function setMode(mode) {
-  displayMode = mode;
-  document.getElementById('btn-mode-one').classList.toggle('mode-active', mode==='one');
-  document.getElementById('btn-mode-all').classList.toggle('mode-active', mode==='all');
-  refreshDisplay();
-}
-
-function getDisplayRows(rows) {
-  if (displayMode === 'all') return rows;
-  const seen = new Map();
-  for (const r of rows) {
-    if (!seen.has(r.nomeDigitado)) seen.set(r.nomeDigitado, r);
+  // Compute UTM from current inputs
+  const decLat = parseFloat(g.decimalLatitude);
+  const decLon = parseFloat(g.decimalLongitude);
+  let vLat='', vLon='';
+  if (!isNaN(decLat) && !isNaN(decLon)) {
+    const u = toUTM(decLat, decLon);
+    vLat = `${u.N} N`;
+    vLon = `${u.E} E`;
   }
-  return [...seen.values()];
+
+  // Per-row: propagate first if others empty
+  const prData = {};
+  PER_ROW_COLS.forEach(field => {
+    const vals = taxRows.map((_,i) => getPR(field,i));
+    const onlyFirst = vals[0] !== '' && vals.slice(1).every(v => v === '');
+    prData[field] = onlyFirst ? taxRows.map(() => vals[0]) : vals;
+  });
+
+  tableData = taxRows.map((tax, i) => {
+    const n = i+1;
+    const row = {};
+
+    // Global
+    GLOBAL_IDS.forEach(id => { if (id !== 'decimalLatitude' && id !== 'decimalLongitude') row[id] = g[id]; else row[id] = g[id]; });
+
+    // Auto
+    row.occurrenceID   = prefix ? `${prefix}${n}` : String(n);
+    row.recordNumber   = String(n);
+    row.verbatimLatitude  = vLat;
+    row.verbatimLongitude = vLon;
+    row.decimalLatitude   = g.decimalLatitude;
+    row.decimalLongitude  = g.decimalLongitude;
+
+    // Taxonomy
+    TAX_COLS.forEach(col => row[col] = tax[col]||'');
+
+    // Per-row
+    PER_ROW_COLS.forEach(field => {
+      let v = prData[field][i]||'';
+      if (field === 'individualCount' && v === '') v = '1';
+      row[field] = v;
+    });
+
+    return row;
+  });
+
+  renderPreview();
+  showSt('gen-status', `✓ Tabela gerada: ${tableData.length} registro(s) × ${COLS.length} colunas.`, 'ok');
 }
 
-function refreshDisplay() {
-  if (!lastResults.length) return;
-  const display = getDisplayRows(lastResults);
-  renderTable(display);
-  renderTable2(display);
-  const names = [...new Set(lastResults.map(r => r.nomeDigitado))];
-  const found = display.filter(r => r.statusBusca !== 'Nao encontrado').length;
-  const nf    = display.filter(r => r.statusBusca === 'Nao encontrado').length;
-  renderStats(names.length, found, nf);
+// ══════════════════════════════════════════
+// PREVIEW RENDER
+// ══════════════════════════════════════════
+function renderPreview() {
+  const wrap = document.getElementById('tbl-wrap');
+
+  let h = '<table><thead><tr>';
+  COLS.forEach(c => h += `<th>${esc(c)}</th>`);
+  h += '</tr></thead><tbody>';
+
+  tableData.forEach(row => {
+    h += '<tr>';
+    COLS.forEach(c => {
+      const v = row[c]||'';
+      const display = v.length > 28 ? v.substring(0,28)+'…' : v;
+      h += `<td class="${v?'':'empty'}" title="${esc(v)}">${esc(display)||'&nbsp;'}</td>`;
+    });
+    h += '</tr>';
+  });
+
+  h += '</tbody></table>';
+  wrap.innerHTML = h;
+
+  const card = document.getElementById('preview-card');
+  card.style.display = 'block';
+  document.getElementById('preview-info').textContent =
+    `${tableData.length} registros · ${COLS.length} colunas`;
+  card.scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
-// ── COPY ──────────────────────────────────────────────────────────────────
-function copyTable(tableNum) {
-  if (!lastResults.length) return;
-  const display = getDisplayRows(lastResults);
-  let tsv = '';
+// ══════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════
+function doExport(fmt) {
+  if (tableData.length === 0) { alert('Gere a tabela primeiro.'); return; }
 
-  if (tableNum === 1) {
-    const headers = ['#','Busca','Tipo','kingdom','phylum','class','order','family','genus','specificEpithet','infraspecificEpithet','identificationQualifier','scientificName','taxonRank'];
-    const dataRows = display.map((r,i) => [i+1,r.nomeDigitado,r.tipo,r.kingdom,r.phylum,r.class,r.order,r.family,r.genus,r.specificEpithet,r.infraspecificEpithet,r.identificationQualifier,r.scientificName,r.taxonRank]);
-    tsv = [headers,...dataRows].map(row => row.map(c=>String(c??'').replace(/\t/g,' ')).join('\t')).join('\r\n');
+  let content, fname, mime;
+
+  if (fmt === 'tsv') {
+    const lines = [COLS.join('\t')];
+    tableData.forEach(row => {
+      lines.push(COLS.map(c => (row[c]||'').replace(/\t/g,' ')).join('\t'));
+    });
+    content = lines.join('\r\n');
+    fname = 'gbif_occurrence.txt';
+    mime = 'text/tab-separated-values';
   } else {
-    const headers = ['#','kingdom','phylum','class','order','family','genus','specificEpithet','infraspecificEpithet','identificationQualifier','scientificName','taxonRank'];
-    const dataRows = display.map((r,i) => [i+1,r.kingdom,r.phylum,r.class,r.order,r.family,r.genus,r.specificEpithet,r.infraspecificEpithet,r.identificationQualifier,r.scientificName,r.taxonRank]);
-    tsv = [headers,...dataRows].map(row => row.map(c=>String(c??'').replace(/\t/g,' ')).join('\t')).join('\r\n');
+    const lines = [COLS.map(c => `"${c}"`).join(',')];
+    tableData.forEach(row => {
+      lines.push(COLS.map(c => {
+        const v = (row[c]||'').replace(/"/g,'""');
+        return `"${v}"`;
+      }).join(','));
+    });
+    content = lines.join('\r\n');
+    fname = 'gbif_occurrence.csv';
+    mime = 'text/csv';
   }
 
-  navigator.clipboard.writeText(tsv).then(() => {
-    const btn = document.getElementById(`btn-copy-${tableNum}`);
-    const orig = btn.textContent;
-    btn.textContent = '✅ Copiado!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
-  }).catch(() => {
-    const ta2 = document.createElement('textarea');
-    ta2.value = tsv;
-    ta2.style.position = 'fixed'; ta2.style.opacity = '0';
-    document.body.appendChild(ta2); ta2.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta2);
-    const btn = document.getElementById(`btn-copy-${tableNum}`);
-    btn.textContent = '✅ Copiado!';
-    btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = `📋 Copiar Tabela ${tableNum} para Excel`; btn.classList.remove('copied'); }, 2000);
+  const blob = new Blob(['\uFEFF'+content], { type: mime+';charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+// ══════════════════════════════════════════
+// PRESET UPLOAD
+// ══════════════════════════════════════════
+
+// Map preset column names to form field IDs
+// Some columns don't have a direct field (e.g. occurrenceID is prefix-only),
+// those are simply skipped.
+const PRESET_FIELD_MAP = {
+  basisOfRecord:       'basisOfRecord',
+  modified:            'modified',
+  datasetName:         'datasetName',
+  type:                'type',
+  language:            'language',
+  institutionID:       'institutionID',
+  institutionCode:     'institutionCode',
+  license:             'license',
+  rightsHolder:        'rightsHolder',
+  dynamicProperties:   'dynamicProperties',
+  recordedBy:          'recordedBy',
+  associatedMedia:     'associatedMedia',
+  eventDate:           'eventDate',
+  habitat:             'habitat',
+  samplingProtocol:    'samplingProtocol',
+  samplingEffort:      'samplingEffort',
+  continent:           'continent',
+  country:             'country',
+  countryCode:         'countryCode',
+  stateProvince:       'stateProvince',
+  county:              'county',
+  waterBody:           'waterBody',
+  locality:            'locality',
+  locationRemarks:     'locationRemarks',
+  decimalLatitude:     'decimalLatitude',
+  decimalLongitude:    'decimalLongitude',
+  geodeticDatum:       'geodeticDatum',
+  georeferenceProtocol:'georeferenceProtocol',
+  identifiedBy:        'identifiedBy',
+  dateIdentified:      'dateIdentified',
+  identificationRemarks:'identificationRemarks'
+};
+
+document.getElementById('preset-file').addEventListener('change', function() {
+  const file = this.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result.trim();
+    const lines = text.split('\n').filter(l => l.trim() !== '');
+    if (lines.length < 2) {
+      alert('Arquivo de preset inválido. Esperado: 1ª linha = cabeçalhos, 2ª linha = valores.');
+      return;
+    }
+
+    const headers = lines[0].split('\t').map(h => h.trim());
+    const values  = lines[1].split('\t').map(v => v.trim());
+
+    let filled = 0;
+    headers.forEach((col, i) => {
+      const fieldId = PRESET_FIELD_MAP[col];
+      if (!fieldId) return; // column not mapped (taxonomy cols, etc.)
+      const val = values[i] !== undefined ? values[i] : '';
+      if (val === '') return; // only fill non-empty values
+      const el = document.getElementById(fieldId);
+      if (el) { el.value = val; filled++; }
+    });
+
+    // Recalculate UTM if coordinates were loaded
+    calcUTM();
+
+    // Update UI
+    document.getElementById('preset-info').textContent =
+      `${filled} campo(s) preenchido(s) a partir do preset.`;
+    document.getElementById('preset-info').className = 'preset-info loaded';
+    document.getElementById('preset-tag-name').textContent = file.name;
+    document.getElementById('preset-tag').style.display = 'inline-flex';
+    document.getElementById('preset-clear-btn').style.display = 'inline-flex';
+
+    showSt('gen-status', `✓ Preset "${file.name}" carregado — ${filled} campos preenchidos.`, 'ok');
+  };
+  reader.readAsText(file, 'UTF-8');
+});
+
+function clearPreset() {
+  document.getElementById('preset-file').value = '';
+  document.getElementById('preset-info').textContent = 'Nenhum arquivo carregado — os campos globais serão preenchidos manualmente.';
+  document.getElementById('preset-info').className = 'preset-info';
+  document.getElementById('preset-tag').style.display = 'none';
+  document.getElementById('preset-clear-btn').style.display = 'none';
+}
+
+function clearAll() {
+  if (!confirm('Limpar todos os dados? Esta ação não pode ser desfeita.')) return;
+  document.querySelectorAll('input[type=text], textarea').forEach(el => el.value='');
+  taxRows = []; tableData = [];
+  document.getElementById('utm_lat').textContent='—';
+  document.getElementById('utm_lon').textContent='—';
+  document.getElementById('tax-badge').style.display='none';
+  document.getElementById('pr-container').innerHTML='<div class="empty-state">↑ Processe a taxonomia primeiro para ativar esta seção.</div>';
+  document.getElementById('preview-card').style.display='none';
+  document.getElementById('tbl-wrap').innerHTML='';
+  ['tax-status','gen-status'].forEach(id => {
+    const el=document.getElementById(id); if(el){el.className='status';el.style.display='none';}
   });
 }
-
-// ── EXPORT EXCEL ───────────────────────────────────────────────────────────
-function exportExcel() {
-  if (!lastResults.length) return;
-  const display = getDisplayRows(lastResults);
-  const headers = ['Nome Digitado','Tipo Busca','kingdom','phylum','class','order','family','genus','specificEpithet','infraspecificEpithet','identificationQualifier','scientificName','taxonRank'];
-  const data = [headers, ...display.map(r => [r.nomeDigitado,r.tipo,r.kingdom,r.phylum,r.class,r.order,r.family,r.genus,r.specificEpithet,r.infraspecificEpithet,r.identificationQualifier,r.scientificName,r.taxonRank])];
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{wch:24},{wch:18},{wch:12},{wch:14},{wch:18},{wch:18},{wch:20},{wch:16},{wch:18},{wch:20},{wch:24},{wch:34},{wch:10}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Biota Aquática');
-  XLSX.writeFile(wb, 'biota_aquatica_resultado.xlsx');
-}
-
-// ── CLEAR ──────────────────────────────────────────────────────────────────
-function clearResults() {
-  document.getElementById('result-body').innerHTML  = '';
-  document.getElementById('result-body2').innerHTML = '';
-  document.getElementById('stats-bar').innerHTML    = '';
-  document.getElementById('results-section').style.display = 'none';
-  document.getElementById('btn-export').disabled = true;
-  lastResults = [];
-}
-
-// ── SPECIES SUGGESTER ──────────────────────────────────────────────────────
-let suggActive = -1;
-let suggItems  = [];
-const MAX_SUGG = 50;
-
-function buildSuggestions(query) {
-  if (!dataLoaded || !query || query.length < 2) return [];
-  const norm = normalize(query);
-  const seen = new Set();
-  const results = [];
-
-  const addRows = (arr) => {
-    for (const row of arr) {
-      const key = row['scientificName'] || '';
-      if (seen.has(key)) continue;
-      seen.add(key);
-      results.push({ scientificName: key, rank: row['taxonRank'] || '' });
-      if (results.length >= MAX_SUGG) return true;
-    }
-    return false;
-  };
-
-  // Exact scientific
-  if (scientificIndex.has(norm)) { if (addRows(scientificIndex.get(norm))) return results; }
-  // Exact genus
-  if (genusIndex.has(norm)) { if (addRows(genusIndex.get(norm))) return results; }
-  // Partial scientific starts-with
-  for (const [key, arr] of scientificIndex) {
-    if (key !== norm && key.startsWith(norm)) { if (addRows(arr)) return results; }
-  }
-  // Partial scientific contains
-  if (results.length < MAX_SUGG) {
-    for (const [key, arr] of scientificIndex) {
-      if (key !== norm && !key.startsWith(norm) && key.includes(norm)) { if (addRows(arr)) return results; if (results.length >= MAX_SUGG) break; }
-    }
-  }
-  return results;
-}
-
-function getLastLine(val) {
-  const lines = val.split('\n');
-  return lines[lines.length - 1].trim();
-}
-
-function showSuggester(items) {
-  const panel = document.getElementById('suggester-panel');
-  const list  = document.getElementById('sugg-list');
-  const count = document.getElementById('sugg-count');
-  suggItems = items;
-  suggActive = -1;
-
-  if (!items.length) { panel.classList.remove('visible'); return; }
-
-  count.textContent = items.length >= MAX_SUGG ? `${MAX_SUGG}+ resultados` : `${items.length} resultado${items.length!==1?'s':''}`;
-  list.innerHTML = items.map((it, idx) =>
-    `<div class="sugg-item" role="option" data-idx="${idx}" data-sn="${esc(it.scientificName)}" onmousedown="selectSuggestion(${idx},event)">
-      <span class="sugg-scientific">${esc(it.scientificName)}</span>
-      <span class="sugg-rank">${esc(it.rank)}</span>
-    </div>`
-  ).join('');
-
-  panel.classList.add('visible');
-}
-
-function closeSuggester() {
-  document.getElementById('suggester-panel').classList.remove('visible');
-  suggItems = [];
-  suggActive = -1;
-}
-
-function selectSuggestion(idx, e) {
-  if (e) e.preventDefault();
-  const item = suggItems[idx];
-  if (!item) return;
-  const ta = document.getElementById('names');
-  const lines = ta.value.split('\n');
-  lines[lines.length - 1] = item.scientificName;
-  ta.value = lines.join('\n');
-  closeSuggester();
-  ta.focus();
-  setTimeout(runLiveSearch, 0);
-}
-
-function moveSuggester(dir) {
-  const items = document.querySelectorAll('#sugg-list .sugg-item');
-  if (!items.length) return false;
-  if (suggActive >= 0) items[suggActive].classList.remove('sugg-active');
-  suggActive = Math.max(0, Math.min(items.length - 1, suggActive + dir));
-  items[suggActive].classList.add('sugg-active');
-  items[suggActive].scrollIntoView({ block: 'nearest' });
-  return true;
-}
-
-// ── LIVE SEARCH EVENTS ─────────────────────────────────────────────────────
-const namesTA = document.getElementById('names');
-
-namesTA.addEventListener('keydown', e => {
-  const panel = document.getElementById('suggester-panel');
-  if (panel.classList.contains('visible')) {
-    if (e.key === 'ArrowDown') { e.preventDefault(); moveSuggester(1); return; }
-    if (e.key === 'ArrowUp')   { e.preventDefault(); moveSuggester(-1); return; }
-    if (e.key === 'Enter' && suggActive >= 0) { selectSuggestion(suggActive, e); return; }
-    if (e.key === 'Escape') { closeSuggester(); return; }
-  }
-  if (e.ctrlKey && e.key === 'Enter') runSearch();
-  if (e.key === 'Enter') setTimeout(runLiveSearch, 0);
-});
-
-namesTA.addEventListener('paste', () => {
-  setTimeout(() => {
-    namesTA.selectionStart = namesTA.selectionEnd = namesTA.value.length;
-    closeSuggester();
-    runLiveSearch();
-  }, 0);
-});
-
-let _liveTimer = null;
-namesTA.addEventListener('input', () => {
-  clearTimeout(_liveTimer);
-  _liveTimer = setTimeout(() => {
-    const lastLine = getLastLine(namesTA.value);
-    if (lastLine.length >= 2) {
-      const suggs = buildSuggestions(lastLine);
-      showSuggester(suggs);
-    } else {
-      closeSuggester();
-    }
-    runLiveSearch();
-  }, 100);
-});
-
-namesTA.addEventListener('blur', () => {
-  setTimeout(closeSuggester, 200);
-});
-
-document.addEventListener('click', e => {
-  const panel = document.getElementById('suggester-panel');
-  if (!panel.contains(e.target) && e.target !== namesTA) closeSuggester();
-});
 </script>
 </body>
 </html>
